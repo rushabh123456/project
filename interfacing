@@ -1,0 +1,23 @@
+#30A to Arduino
+ 
+Esc yellow 2 
+Black 5v 
+Brown ground
+
+# keypad to arduino 
+
+R 1   11
+R2.   3
+R3.    4 
+R4.    5 
+C1.     6
+C2.     7 
+C3.     8 
+C4.     9
+
+# lcd to arduino 
+
+black ground 
+brown 5V 
+SDA A4
+SCL A5
