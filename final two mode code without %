@@ -1,0 +1,166 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Keypad.h>
+#include <Servo.h>
+
+const char number_of_rows = 4;
+const char number_of_columns = 4;
+
+char row_pins[number_of_rows] = {11, 3, 4, 5};
+char column_pins[number_of_columns] = {6, 7, 8, 9};
+
+char key_array[number_of_rows][number_of_columns] = {  
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+
+Keypad k = Keypad(makeKeymap(key_array), row_pins, column_pins, number_of_rows, number_of_columns);
+
+#define ESC_PIN 2
+
+Servo esc;
+
+enum MotorMode {
+  WATER,
+  OIL
+};
+
+MotorMode currentMode = WATER;  // Default mode is water
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // I2C address 0x27, 16 columns, 2 rows
+
+int motorStartTime = 0;  // Variable to store the start time of the motor
+
+void setup() {
+  Serial.begin(9600);
+  esc.attach(ESC_PIN, 1000, 2000);
+
+  // Initialize LCD
+  lcd.init();
+  lcd.backlight();  // Turn on the LCD screen backlight
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("litter: ");
+  lcd.setCursor(0, 1);
+  lcd.print("M:Water/Oil");
+}
+
+void loop() {
+  char key_pressed = k.getKey();
+  static int enteredNumber = 0;
+  static bool numberEntered = false;
+  int duration = 0;
+
+  if (key_pressed) {
+    if (key_pressed == '#') {
+      // Enter button
+      if (numberEntered) {
+        Serial.print("Entered Number: ");
+        Serial.println(enteredNumber);
+
+        // Adjust duration based on the current mode
+        duration = (currentMode == WATER) ? (enteredNumber * 2000) : (enteredNumber * 3000);
+
+        enteredNumber = 0;  // Reset entered number after printing
+        numberEntered = false;  // Reset numberEntered flag
+        enableMotor(duration);
+        disableMotor();
+
+        // Update LCD
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("litter: ");
+        lcd.print(enteredNumber / 10.0, 1);  // Display entered quantity with one decimal place
+
+        lcd.setCursor(0, 1);
+        lcd.print("Mode: ");
+        lcd.print((currentMode == WATER) ? "Water " : "Oil   ");
+        lcd.backlight();  // Turn on backlight
+      }
+    } else if (key_pressed == '*') {
+      // Clear button
+      if (enteredNumber > 0) {
+        enteredNumber /= 10;  // Remove the last digit
+        Serial.print("Entered Number: ");
+        Serial.println(enteredNumber);
+      } else {
+        Serial.println("Number Cleared");
+      }
+
+      // Update LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("litter: ");
+      lcd.print(enteredNumber / 10.0, 1);  // Display entered quantity with one decimal place
+
+      lcd.setCursor(0, 1);
+      lcd.print("M: ");
+      lcd.print((currentMode == WATER) ? "Water " : "Oil   ");
+      lcd.backlight();  // Turn on backlight
+    } else if (key_pressed == 'A') {
+      // Switch to water mode
+      currentMode = WATER;
+      Serial.println("Water Mode Enabled");
+
+      // Update LCD
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("M: Water");
+      lcd.backlight();  // Turn on backlight
+    } else if (key_pressed == 'B') {
+      // Switch to oil mode
+      currentMode = OIL;
+      Serial.println("Oil Mode Enabled");
+
+      // Update LCD
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("M: Oil");
+      lcd.backlight();  // Turn on backlight
+    } else if (isdigit(key_pressed)) {
+      // Numeric key, update the entered number
+      if (enteredNumber < 100000) {  // Handle up to 5 digits
+        enteredNumber = enteredNumber * 10 + (key_pressed - '0');
+        numberEntered = true;
+        Serial.print("Entered Number: ");
+        Serial.println(enteredNumber);
+
+        // Update LCD
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("litter:    ");
+        lcd.print(enteredNumber / 10.0, 1);  // Display entered quantity with one decimal place
+
+        lcd.setCursor(0, 1);
+        lcd.print("M: ");
+        lcd.print((currentMode == WATER) ? "Water " : "Oil   ");
+        lcd.backlight();  // Turn on backlight
+      }
+    }
+  }
+
+  // Update LCD with completion percentage while running motor
+  if (duration > 0) {
+    int elapsedTime = millis() - motorStartTime;
+    int completionPercentage = map(elapsedTime, 0, duration, 0, 100);
+
+    lcd.setCursor(9, 1);
+    lcd.print(completionPercentage);
+    lcd.print("%");
+  }
+}
+
+void enableMotor(int duration) {
+  esc.write(180);  // Set motor to maximum position
+  delay(1000);     // Allow time for motor to reach maximum position
+  motorStartTime = millis();  // Record the start time of the motor
+  delay(duration);
+}
+
+void disableMotor() {
+  esc.write(0);    // Set motor to minimum position
+  delay(1000);     // Allow time for motor to reach minimum position
+  lcd.noBacklight();  // Turn off backlight
+}
