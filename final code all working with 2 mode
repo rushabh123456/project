@@ -57,7 +57,27 @@ void loop() {
   unsigned long duration = 0;
 
   if (key_pressed) {
-    if (key_pressed == '#') {
+    if (key_pressed == 'A') {
+      // Switch to water mode
+      currentMode = WATER;
+      Serial.println("Water Mode Enabled");
+
+      // Update LCD
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("Mode: Water");
+      lcd.backlight();  // Turn on backlight
+    } else if (key_pressed == 'B') {
+      // Switch to oil mode
+      currentMode = OIL;
+      Serial.println("Oil Mode Enabled");
+
+      // Update LCD
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("Mode: Oil");
+      lcd.backlight();  // Turn on backlight
+    } else if (key_pressed == '#') {
       // Enter button
       if (numberEntered) {
         Serial.print("Entered Number: ");
@@ -110,24 +130,6 @@ void loop() {
       lcd.print("Mode: ");
       lcd.print((currentMode == WATER) ? "Water " : "Oil   ");
       lcd.backlight();  // Turn on backlight
-    } else if (key_pressed == 'A') {
-      // Switch to water mode
-      currentMode = WATER;
-      Serial.println("Water Mode Enabled");
-
-      // Update LCD
-      lcd.clear();
-      lcd.setCursor(0, 1);
-      lcd.print("Mode: Water");
-    } else if (key_pressed == 'B') {
-      // Switch to oil mode
-      currentMode = OIL;
-      Serial.println("Oil Mode Enabled");
-
-      // Update LCD
-      lcd.clear();
-      lcd.setCursor(0, 1);
-      lcd.print("Mode: Oil");
     } else if (isdigit(key_pressed)) {
       // Numeric key, update the entered number
       if (enteredNumber < 1000000) {  // Handle up to 6 digits
@@ -160,5 +162,5 @@ void enableMotor(unsigned long duration) {
 void disableMotor() {
   esc.write(0);    // Set motor to the minimum position
   delay(2000);     // Allow time for the motor to reach the minimum position
-   totalDuration = 0;  // Clear the total duration after completing a task
+  totalDuration = 0;  // Clear the total duration after completing a task
 }
